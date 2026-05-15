@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Yadro_test_3</string>
+    <string name="delete_button_text">Delete duplicate contacts</string>
+    <string name="error_message">произошла ошибка</string>
+    <string name="successful_message">повторяющиеся контакты удалены успешно</string>
+    <string name="duplicate_contacts_not_found_message">повторяющиеся контакты не найдены</string>
+</resources>
