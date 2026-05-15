@@ -8,14 +8,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
@@ -27,23 +27,15 @@ fun ContactItem(contact: Contact) {
         contact.avatar?.toUri()
     }
     Row(modifier = Modifier.padding(8.dp)) {
-        if (photoUri != null) {
             AsyncImage(
                 model = photoUri,
-                contentDescription = "Contact photo",
+                contentDescription = "photo",
+                error = rememberVectorPainter(Icons.Default.AccountCircle),
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(CircleShape)
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Default avatar",
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-            )
-        }
+                    .clip(CircleShape))
+
+
 
         Spacer(modifier = Modifier.width(8.dp))
 

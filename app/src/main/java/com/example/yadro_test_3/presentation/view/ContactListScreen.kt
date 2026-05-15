@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.yadro_test_3.presentation.ContactViewModel
-import kotlinx.coroutines.delay
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,7 +43,7 @@ fun ContactListScreen(viewModel: ContactViewModel) {
     val groupedContacts by viewModel.groupedContacts.collectAsState(emptyMap())
     val status by viewModel.status.collectAsState()
     val context = LocalContext.current
-    var visibleContacts by remember { mutableStateOf(emptySet<String>()) }
+    var contacts by remember { mutableStateOf(emptySet<String>()) }
     val permissionEvent by viewModel.requestPermissionsEvent.collectAsState()
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -60,24 +59,18 @@ fun ContactListScreen(viewModel: ContactViewModel) {
     }
 
     LaunchedEffect(Unit) {
-        val hasRead = ContextCompat.checkSelfPermission(
+        val read = ContextCompat.checkSelfPermission(
             context, Manifest.permission.READ_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
 
-        val hasWrite = ContextCompat.checkSelfPermission(
+        val write = ContextCompat.checkSelfPermission(
             context, Manifest.permission.WRITE_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
 
-        viewModel.checkPermissionsAndLoadContacts(hasReadPermission = hasRead, hasWritePermission = hasWrite)
+        viewModel.checkPermissionsAndLoadContacts(hasReadPermission = read, hasWritePermission = write)
     }
 
-    LaunchedEffect(groupedContacts) {
-        val allContactIds = groupedContacts.values.flatten().map { it.id }.toSet()
-        if (visibleContacts != allContactIds) {
-            delay(300)
-            visibleContacts = allContactIds
-        }
-    }
+    contacts = groupedContacts.values.flatten().map { it.id }.toSet()
 
     Column(
         modifier = Modifier
@@ -109,7 +102,7 @@ fun ContactListScreen(viewModel: ContactViewModel) {
                     key = { it.id }
                 ) { contact ->
                     AnimatedVisibility(
-                        visible = visibleContacts.contains(contact.id),
+                        visible = contacts.contains(contact.id),
                         exit = fadeOut(animationSpec = tween(300)) +
                                 shrinkVertically(animationSpec = tween(300)),
                         modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
@@ -119,6 +112,7 @@ fun ContactListScreen(viewModel: ContactViewModel) {
                 }
             }
         }
+
 
         Button(
             onClick = { viewModel.deleteDuplicates() },

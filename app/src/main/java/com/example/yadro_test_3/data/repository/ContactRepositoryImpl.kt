@@ -19,20 +19,21 @@ class ContactRepositoryImpl(private val context: Context) : ContactRepository {
 
     private var contactService: IContactService? = null
     private var isConnected = false
-    private val pendCallbacks = ConcurrentLinkedQueue<() -> Unit>()
+    private val pendingOperations = ConcurrentLinkedQueue<() -> Unit>()
 
     private val serviceConnect = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            Log.d("ContactsApp_yadro_variant3", "Service connected")
             contactService = IContactService.Stub.asInterface(service)
             isConnected = true
-
             while (true) {
-                val callback = pendCallbacks.poll() ?: break
+                val callback = pendingOperations.poll() ?: break
                 callback.invoke()
             }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            Log.w("ContactsApp_yadro_variant3", "Service disconnected unexpectedly")
             isConnected = false
             contactService = null
         }
@@ -45,11 +46,16 @@ class ContactRepositoryImpl(private val context: Context) : ContactRepository {
     private fun connectToService() {
         if (isConnected || contactService != null) return
         val intent = Intent(context, ContactService::class.java)
-        context.bindService(intent, serviceConnect, Context.BIND_AUTO_CREATE)
+        try {
+            context.bindService(intent, serviceConnect, Context.BIND_AUTO_CREATE)
+        } catch (e: Exception) {
+            Log.e("ContactsApp_yadro_variant3", "Failed to bind service: ${e.message}", e)
+        }
     }
 
+
     override fun getContacts(callback: (List<Contact>) -> Unit) {
-        fun executeGetContacts() {
+        fun execGetContacts() {
             contactService?.getContacts(object : IGetContactsCallback.Stub() {
                 override fun onResult(contacts: MutableList<AidlContact>?) {
                     callback(contacts ?: emptyList())
@@ -58,12 +64,13 @@ class ContactRepositoryImpl(private val context: Context) : ContactRepository {
         }
 
         if (isConnected && contactService != null) {
-            executeGetContacts()
+            execGetContacts()
         } else {
-            pendCallbacks.add { executeGetContacts() }
+            pendingOperations.add { execGetContacts() }
             connectToService()
         }
     }
+
 
     override fun deleteDuplicates(callback: (String) -> Unit) {
         fun execDeleteDuplicates() {
@@ -77,7 +84,7 @@ class ContactRepositoryImpl(private val context: Context) : ContactRepository {
         if (isConnected && contactService != null) {
             execDeleteDuplicates()
         } else {
-            pendCallbacks.add { execDeleteDuplicates() }
+            pendingOperations.add { execDeleteDuplicates() }
             connectToService()
         }
     }
@@ -85,10 +92,15 @@ class ContactRepositoryImpl(private val context: Context) : ContactRepository {
     fun disconnect() {
         try {
             context.unbindService(serviceConnect)
+            Log.d("ContactsApp_yadro_variant3", "Service disconnected")
+        } catch (e: IllegalArgumentException) {
+            Log.d("ContactsApp_yadro_variant3", "Service was already disconnected")
         } catch (e: Exception) {
-            Log.e("Contacts_yadro_var3", e.message.toString())
+            Log.e("ContactsApp_yadro_variant3", "Unexpected error during disconnect: ${e.message}", e)
         }
+
         contactService = null
         isConnected = false
+        pendingOperations.clear()
     }
 }

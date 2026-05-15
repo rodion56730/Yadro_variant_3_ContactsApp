@@ -17,42 +17,47 @@ class ContactService : Service() {
 
         override fun getContacts(callback: IGetContactsCallback?) {
                 try {
+                    Log.d("ContactApp_yadro_variant3", "getContacts called")
                     val contacts = mutableListOf<Contact>()
                     val resolver = contentResolver
+
                     val cursor = resolver.query(
                         ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                         arrayOf(
                             ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
                             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
                             ContactsContract.CommonDataKinds.Phone.NUMBER,
-                            ContactsContract.CommonDataKinds.Phone.PHOTO_URI
+                            ContactsContract.CommonDataKinds.Phone.PHOTO_URI,
                         ),
                         null,
                         null,
                         "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC"
                     )
-
                     cursor?.use {
                         val idIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
                         val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                         val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
                         val photoIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
+                        val addedContactIds = mutableSetOf<String>()
 
                         while (it.moveToNext()) {
                             val id = it.getString(idIndex)
-                            val name = it.getString(nameIndex) ?: "no name"
-                            val number = it.getString(numberIndex) ?: "no phone"
-                            val photo = it.getString(photoIndex)
-                            contacts.add(Contact(id, name, number, photo))
+                            if (addedContactIds.contains(id)) continue
+
+                            contacts.add(Contact(id, it.getString(nameIndex) ?: "no name",
+                                it.getString(numberIndex) ?: "no phone",
+                                it.getString(photoIndex)))
+                            addedContactIds.add(id)
                         }
                     }
-
+                    Log.d("Contact_yadro_variant3", "Loaded ${contacts.size} contacts")
                     callback?.onResult(contacts)
                 } catch (e: Exception) {
                     Log.e("Contacts_yadro_var3",e.message.toString())
                     callback?.onResult(emptyList())
                 }
         }
+
 
         override fun deleteDuplicateContacts(callback: IDeleteCallback?) {
                 try {
@@ -65,7 +70,7 @@ class ContactService : Service() {
                             ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
                             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
                             ContactsContract.CommonDataKinds.Phone.NUMBER,
-                            ContactsContract.CommonDataKinds.Phone.PHOTO_URI
+                            ContactsContract.CommonDataKinds.Phone.PHOTO_URI,
                         ),
                         null,
                         null,
@@ -79,13 +84,13 @@ class ContactService : Service() {
                             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                         val numberIndex = it.getColumnIndex(
                             ContactsContract.CommonDataKinds.Phone.NUMBER)
-
                         while (it.moveToNext()) {
-                            val id = it.getLong(idIndex)
-                            val name = it.getString(nameIndex)?.trim() ?: ""
-                            val number = it.getString(numberIndex)?.replace("\\s".toRegex(), "") ?: ""
-                            val key = "$name|$number"
-                            contactMap.getOrPut(key) { mutableListOf() }.add(id)
+                                val id = it.getLong(idIndex)
+                                val name = it.getString(nameIndex)?.trim() ?: ""
+                                val number =
+                                    it.getString(numberIndex)?.replace("\\s".toRegex(), "") ?: ""
+                                val key = "$name|$number"
+                                contactMap.getOrPut(key) { mutableListOf() }.add(id)
                         }
                     }
 
@@ -105,13 +110,17 @@ class ContactService : Service() {
                             }
                         }
                         callback?.onComplete(context.getString(R.string.successful_message))
+                        Log.d("Contacts_yadro_var3", "Deleted duplicate contacts")
+
                     }
                 } catch (e: Exception) {
                     Log.e("Contacts_yadro_var3", e.message.toString())
                     callback?.onComplete(applicationContext.getString(R.string.error_message))
+
                 }
         }
     }
+
 
     override fun onBind(intent: Intent?): IBinder = contactServiceBinder
 }
